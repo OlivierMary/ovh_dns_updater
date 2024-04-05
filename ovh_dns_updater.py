@@ -16,7 +16,7 @@ for k in [
 # Config mapping
 zone            = os.getenv('DNS_ZONE')
 subdomain       = os.getenv('DNS_SUBDOMAIN', '')
-ttl             = os.getenv('DNS_TTL', 5)
+ttl             = os.getenv('DNS_TTL', 30)
 addressesType   = os.getenv('NODE_ADDRESSES_TYPE', 'ExternalIP')
 localConfig     = os.getenv('LOCALCONFIG', False)
 
