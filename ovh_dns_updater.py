@@ -8,19 +8,23 @@ for k in [
         'OVH_APPLICATION_KEY',
         'OVH_APPLICATION_SECRET',
         'OVH_CONSUMER_KEY',
-        'DNS_ZONE',
-        'DNS_SUBDOMAIN',
+        'DNS_ZONE'
         ]:
     if k not in os.environ:
         raise KeyError('Required env var ' + k + ' not found in environment!')
 
 # Config mapping
-zone      = os.getenv('DNS_ZONE')
-subdomain = os.getenv('DNS_SUBDOMAIN')
-ttl       = os.getenv('DNS_TTL', 30)
+zone            = os.getenv('DNS_ZONE')
+subdomain       = os.getenv('DNS_SUBDOMAIN', '')
+ttl             = os.getenv('DNS_TTL', 5)
+addressesType   = os.getenv('NODE_ADDRESSES_TYPE', 'ExternalIP')
+localConfig     = os.getenv('LOCALCONFIG', False)
 
 # Configs can be set in Configuration class directly or using helper utility
-config.load_incluster_config()
+if localConfig:
+    config.load_kube_config()
+else:
+    config.load_incluster_config()
 
 v1 = client.CoreV1Api()
 ret = v1.list_node(watch=False)
@@ -28,12 +32,12 @@ external_ips = []
 for node in ret.items:
     external_ips += [i.address
             for i in node.status.addresses
-            if i.type == 'ExternalIP']
+            if i.type == addressesType]
 
-print("Current node ExternalIPs: %s" % external_ips)
+print("Current node %ss: %s" % (addressesType, external_ips))
 
 client = ovh.Client(
-    endpoint='ovh-eu',
+    endpoint=os.getenv('OVH_ENDPOINT', 'ovh-eu'),
     application_key=os.getenv('OVH_APPLICATION_KEY'),
     application_secret=os.getenv('OVH_APPLICATION_SECRET'),
     consumer_key=os.getenv('OVH_CONSUMER_KEY'),
@@ -69,3 +73,8 @@ for i in missing_external_ips:
             target=i,
             ttl=ttl)
     print(json.dumps(result, sort_keys=True, indent=2))
+
+# Need refresh zone to apply Zone.
+print("Refresh Zone: %s" % zone)
+result = client.post('/domain/zone/%s/refresh' % zone)
+print(json.dumps(result, sort_keys=True, indent=2))
